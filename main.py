@@ -1,20 +1,34 @@
 import json
 import os
 import openai
-from flask import Flask, url_for, request, send_from_directory
+import socket
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.254.254.254', 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+    return ip
+
+from flask import Flask, url_for, send_from_directory
 
 app = Flask(__name__)
 
 @app.route('/download-csv')
 def download_csv():
-        return send_from_directory(directory='.', path='extracted_data.csv', as_attachment=True)
-
-print(f"Server will run on http://{host}:{port}{url_for('download_csv')}")
- 
-#https://statuscreatormastodonfile2.bramalkema1.repl.co/download-csv
+    return send_from_directory(directory='.', path='extracted_data.csv', as_attachment=True)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    host = '0.0.0.0'
+    port = 5000
+    external_ip = get_ip_address()
+    print(f"Server will run on http://{external_ip}:{port}{url_for('download_csv', _external=False)}")
+    app.run(host=host, port=port)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 num_iterations = 25  # Set your desired number of iterations
