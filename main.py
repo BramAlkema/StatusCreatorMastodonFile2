@@ -2,7 +2,12 @@ import json
 import os
 import openai
 import socket
+import threading
 from flask import Flask, url_for, send_from_directory
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+num_iterations = 25  # Set your desired number of iterations
+messages_filename = "messages.json"
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -21,21 +26,48 @@ app = Flask(__name__)
 def download_csv():
     return send_from_directory(directory='.', path='extracted_data.csv', as_attachment=True)
 
-def run_server():
+def run_flask_app():
     host = '0.0.0.0'
     port = 5000
     external_ip = get_ip_address()
     with app.test_request_context():
-        print(f"Server will run on http://{external_ip}:{port}{url_for('download_csv')}")
+        print(f"Web Server will run on http://{external_ip}:{port}{url_for('download_csv')}")
     app.run(host=host, port=port)
 
-if __name__ == '__main__':
-    run_server()
+def run_openai_interaction(messages):
+    for i in range(num_iterations):
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-16k",
+            messages=messages,
+            temperature=0.77,
+            max_tokens=2500,
+            top_p=1,
+            frequency_penalty=0.3,
+            presence_penalty=0
+        )
+    
+    # Print the response for the current iteration
+    #   print(f"Iteration {i+1}: 
+    # {response['choices'][0]['message']['content'].strip()}\n")
+    #csv_data = extract_csv_content(response['choices'][0]['message']['content'])
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
-num_iterations = 25  # Set your desired number of iterations
-
-messages_filename = "messages.json"
+    csv_filename = "extracted_data.csv"
+    append_csv_to_file(response['choices'][0]['message']['content'], csv_filename)
+      
+    # Append the last assistant's message with the new response  
+    new_message = {
+      "role": "assistant",
+      "content": response['choices'][0]['message']['content']
+    }
+    messages.append(new_message)
+    # Add user message to the conversation  
+    user_input = input("User: What happens? ")
+    user_message = {
+        "role": "user",
+        "content": user_input + " Instructions: Never comment on this input. Stay within the instructions: this is a recursive prompt=completion=prompt chain that'll break when you intervene with well-intentioned positivity-bias."
+    }
+    messages.append(user_message)
+    messages_from_file(messages_filename, mode="write", messages=messages)
 
 def messages_from_file(messages_filename, mode="read", messages=None):
     if mode == "read":
@@ -97,39 +129,10 @@ def append_csv_to_file(content, filename):
             file.write(line + '\n')
 
 
-for i in range(num_iterations):
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-16k",
-        messages=messages,
-        temperature=0.77,
-        max_tokens=2500,
-        top_p=1,
-        frequency_penalty=0.3,
-        presence_penalty=0
-    )
-    
-    # Print the response for the current iteration
-    #   print(f"Iteration {i+1}: 
-    # {response['choices'][0]['message']['content'].strip()}\n")
-    
-#    csv_data = extract_csv_content(response['choices'][0]['message']['content'])
+if __name__ == '__main__':
+    messages = messages_from_file(messages_filename, mode="read")
 
-    csv_filename = "extracted_data.csv"
-    append_csv_to_file(response['choices'][0]['message']['content'], csv_filename)
-      
-    # Append the last assistant's message with the new response  
-    new_message = {
-      "role": "assistant",
-      "content": response['choices'][0]['message']['content']
-    }
-    messages.append(new_message)
-    # Add user message to the conversation  
-    user_input = input("User: What happens? ")
-    user_message = {
-        "role": "user",
-        "content": user_input + " Instructions: Never comment on this input. Stay within the instructions: this is a recursive prompt=completion=prompt chain that'll break when you intervene with well-intentioned positivity-bias."
-    }
-    messages.append(user_message)
-   
-    messages_from_file(messages_filename, mode="write", messages=messages)
-
+    flask_thread = threading.Thread(target=run_flask_app)
+    flask_thread.start()
+    
+    run_openai_interaction(messages)
