@@ -1,15 +1,23 @@
 import json
 import os
 import openai
-from flask import Flask, send_from_directory
+from flask import Flask, url_for, request, send_from_directory
 
 app = Flask(__name__)
 
 @app.route('/download-csv')
 def download_csv():
-    return send_from_directory(directory='.', filename='extracted_data.csv', as_attachment=True)
+        return send_from_directory(directory='.', path='extracted_data.csv', as_attachment=True)
+
+print(f"Server will run on http://{host}:{port}{url_for('download_csv')}")
+ 
+#https://statuscreatormastodonfile2.bramalkema1.repl.co/download-csv
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', debug=True)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+num_iterations = 25  # Set your desired number of iterations
 
 messages_filename = "messages.json"
 
@@ -24,8 +32,6 @@ def messages_from_file(messages_filename, mode="read", messages=None):
       with open(messages_filename, 'w') as file:
             json.dump(messages, file, indent=4)
       return [] 
-
-num_iterations = 25  # Set your desired number of iterations
 
 messages = messages_from_file(messages_filename, mode="read")
 
@@ -111,6 +117,3 @@ for i in range(num_iterations):
    
     messages_from_file(messages_filename, mode="write", messages=messages)
 
-
-if __name__ == '__main__':
-    app.run(debug=True)
