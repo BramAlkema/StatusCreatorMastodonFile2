@@ -132,7 +132,7 @@ def append_csv_to_file(content, filename):
 if __name__ == '__main__':
     messages = messages_from_file(messages_filename, mode="read")
 
-    flask_thread = threading.Thread(target=run_flask_app)
+    flask_thread = threading.Thread(target=run_flask_app, daemon=True)
     flask_thread.start()
     
     run_openai_interaction(messages)
