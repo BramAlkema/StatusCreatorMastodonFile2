@@ -21,16 +21,16 @@ app = Flask(__name__)
 def download_csv():
     return send_from_directory(directory='.', path='extracted_data.csv', as_attachment=True)
 
-@app.before_first_request
-def before_first_request():
-    external_ip = get_ip_address()
-    port = 5000
-    print(f"Server will run on http://{external_ip}:{port}{url_for('download_csv')}")
-
-if __name__ == '__main__':
+def run_server():
     host = '0.0.0.0'
     port = 5000
+    external_ip = get_ip_address()
+    with app.test_request_context():
+        print(f"Server will run on http://{external_ip}:{port}{url_for('download_csv')}")
     app.run(host=host, port=port)
+
+if __name__ == '__main__':
+    run_server()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 num_iterations = 25  # Set your desired number of iterations
