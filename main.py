@@ -32,6 +32,7 @@ messages = messages_from_file(messages_filename, mode="read")
 def extract_csv_content(content):
     """
     Extracts the CSV content from a given string based on defined bookends or markers.
+    :EndCSV etc
 
     Args:
         content (str): The content string containing embedded CSV data.
